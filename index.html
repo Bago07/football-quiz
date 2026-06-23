@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Football Quiz Platform — World Cup 2026</title>
+  <meta name="description" content="Test your football knowledge with career quizzes, lineup challenges, and more. Built for the 2026 FIFA World Cup.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./shared/styles.css">
+  <style>
+    .hero {
+      text-align: center;
+      padding: 3.5rem 1rem 2.5rem;
+    }
+    .hero-logo {
+      width: 88px; height: 88px;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 24px;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 1.5rem;
+      backdrop-filter: blur(8px);
+    }
+    .hero h1 {
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--text-on-dark);
+      letter-spacing: -0.035em;
+      line-height: 1.15;
+    }
+    .hero h1 span { color: var(--accent); }
+    .hero p {
+      font-size: 15px;
+      color: var(--text-on-dark-muted);
+      margin-top: 10px;
+      max-width: 400px;
+      margin-left: auto;
+      margin-right: auto;
+      line-height: 1.55;
+    }
+
+    .section-label {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-on-dark-muted);
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .section-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: rgba(255,255,255,0.08);
+    }
+
+    .games-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+
+    .game-tile {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--shadow-lg);
+      transition: all var(--transition);
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      flex-direction: column;
+    }
+    .game-tile:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-xl);
+    }
+
+    .tile-banner {
+      height: 120px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .tile-banner svg { position: relative; z-index: 1; }
+
+    .tile-banner-career {
+      background: linear-gradient(135deg, var(--bg-main), var(--bg-light));
+    }
+    .tile-banner-coming {
+      background: linear-gradient(135deg, #3a3a4a, #4a4a5a);
+    }
+
+    .tile-banner::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 30% 60%, rgba(255,255,255,0.06) 0%, transparent 50%),
+        radial-gradient(circle at 70% 30%, rgba(255,255,255,0.04) 0%, transparent 40%);
+    }
+
+    .tile-body {
+      padding: 1.25rem;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .tile-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .tile-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
+    }
+    .tile-desc {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      flex: 1;
+    }
+    .tile-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 1rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid var(--border-light);
+    }
+    .tile-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .tile-meta svg { width: 13px; height: 13px; stroke: var(--text-muted); stroke-width: 2; fill: none; }
+    .tile-play {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--accent-text);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      letter-spacing: 0.02em;
+    }
+    .tile-play svg { width: 14px; height: 14px; stroke: var(--accent-text); stroke-width: 2.5; fill: none; }
+
+    .tile-coming-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      padding: 3px 10px;
+      background: var(--surface-alt);
+      border-radius: 999px;
+    }
+
+    .stats-bar {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      margin-top: 2rem;
+      padding: 1.25rem;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius-lg);
+    }
+    .stat-item { text-align: center; flex: 1; }
+    .stat-value {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--text-on-dark);
+      letter-spacing: -0.03em;
+    }
+    .stat-label {
+      font-size: 11px;
+      color: var(--text-on-dark-muted);
+      margin-top: 2px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      font-weight: 500;
+    }
+
+    @media (max-width: 640px) {
+      .hero { padding: 2.5rem 1rem 2rem; }
+      .hero h1 { font-size: 26px; }
+      .games-grid { grid-template-columns: 1fr; }
+      .stats-bar { gap: 8px; padding: 1rem; }
+      .stat-value { font-size: 20px; }
+    }
+  </style>
+</head>
+<body>
+<script src="./shared/nav.js" data-active="home"></script>
+
+<div class="page">
+
+  <!-- HERO -->
+  <div class="hero fade-in">
+    <div class="hero-logo">
+      <svg width="48" height="48" viewBox="0 0 40 40" fill="none">
+        <circle cx="8" cy="31" r="3" fill="#5A8A5C" opacity="0.7"/>
+        <circle cx="20" cy="20" r="3" fill="#A8C5A0"/>
+        <circle cx="32" cy="9" r="4.5" fill="#C9A84C"/>
+        <line x1="10.5" y1="29" x2="17.5" y2="22" stroke="#5A8A5C" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+        <line x1="22.5" y1="18" x2="29" y2="11.5" stroke="#A8C5A0" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+        <text x="32" y="13" text-anchor="middle" font-family="Inter,sans-serif" font-size="10" font-weight="800" fill="#2B3F2C">?</text>
+      </svg>
+    </div>
+    <h1>Football<span>Quiz</span></h1>
+    <p>Test your football knowledge with interactive challenges built around the 2026 FIFA World Cup.</p>
+  </div>
+
+  <!-- GAMES -->
+  <div class="section-label">Games</div>
+  <div class="games-grid fade-in">
+
+    <!-- Career Path Finder -->
+    <a class="game-tile" href="./games/career-path/index.html">
+      <div class="tile-banner tile-banner-career">
+        <svg width="64" height="64" viewBox="0 0 40 40" fill="none">
+          <circle cx="8" cy="31" r="3" fill="rgba(255,255,255,0.3)"/>
+          <circle cx="20" cy="20" r="3" fill="rgba(255,255,255,0.5)"/>
+          <circle cx="32" cy="9" r="4.5" fill="rgba(255,255,255,0.85)"/>
+          <line x1="10.5" y1="29" x2="17.5" y2="22" stroke="rgba(255,255,255,0.25)" stroke-width="2" stroke-linecap="round"/>
+          <line x1="22.5" y1="18" x2="29" y2="11.5" stroke="rgba(255,255,255,0.4)" stroke-width="2" stroke-linecap="round"/>
+          <text x="32" y="13" text-anchor="middle" font-family="Inter,sans-serif" font-size="10" font-weight="800" fill="rgba(43,63,44,0.8)">?</text>
+        </svg>
+      </div>
+      <div class="tile-body">
+        <div class="tile-header">
+          <div class="tile-title">Career Path Finder</div>
+          <span class="badge badge-accent">Live</span>
+        </div>
+        <div class="tile-desc">Study a player's club career history and guess who they are. Three difficulty levels from top nations to dark horses.</div>
+        <div class="tile-footer">
+          <div class="tile-meta">
+            <svg viewBox="0 0 24 24" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            2-5 min per round
+          </div>
+          <div class="tile-play">
+            Play
+            <svg viewBox="0 0 24 24" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </div>
+        </div>
+      </div>
+    </a>
+
+    <!-- Coming Soon: Who Am I -->
+    <div class="game-tile" style="cursor:default; opacity:0.75;">
+      <div class="tile-banner tile-banner-coming">
+        <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.5" stroke-linecap="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+          <circle cx="12" cy="7" r="4"/>
+        </svg>
+      </div>
+      <div class="tile-body">
+        <div class="tile-header">
+          <div class="tile-title">Who Am I?</div>
+          <span class="tile-coming-badge">Coming Soon</span>
+        </div>
+        <div class="tile-desc">Guess the player from cryptic clues revealed one by one — nationality, age, stats, and trophies.</div>
+        <div class="tile-footer">
+          <div class="tile-meta">
+            <svg viewBox="0 0 24 24" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            3-5 min per round
+          </div>
+          <div class="tile-play" style="color:var(--text-muted);">Soon</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Coming Soon: Lineup Builder -->
+    <div class="game-tile" style="cursor:default; opacity:0.75;">
+      <div class="tile-banner tile-banner-coming">
+        <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.5" stroke-linecap="round">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <circle cx="8.5" cy="8.5" r="1.5"/><circle cx="15.5" cy="8.5" r="1.5"/>
+          <circle cx="12" cy="14" r="1.5"/>
+          <circle cx="6" cy="17" r="1"/><circle cx="18" cy="17" r="1"/>
+        </svg>
+      </div>
+      <div class="tile-body">
+        <div class="tile-header">
+          <div class="tile-title">Lineup Builder</div>
+          <span class="tile-coming-badge">Coming Soon</span>
+        </div>
+        <div class="tile-desc">Recreate the exact starting XI from iconic World Cup matches. Drag and drop players into formation.</div>
+        <div class="tile-footer">
+          <div class="tile-meta">
+            <svg viewBox="0 0 24 24" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            5-10 min per round
+          </div>
+          <div class="tile-play" style="color:var(--text-muted);">Soon</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- PLATFORM STATS -->
+  <div class="stats-bar fade-in">
+    <div class="stat-item">
+      <div class="stat-value" id="stat-players">—</div>
+      <div class="stat-label">Players</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value" id="stat-teams">—</div>
+      <div class="stat-label">Nations</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value">3</div>
+      <div class="stat-label">Difficulty</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value">1</div>
+      <div class="stat-label">Game Live</div>
+    </div>
+  </div>
+
+  <!-- YOUR STATS (shown if played at least once) -->
+  <div class="stats-bar fade-in" id="user-stats-bar" style="display:none; margin-top:12px;">
+    <div class="stat-item">
+      <div class="stat-value" id="us-played">0</div>
+      <div class="stat-label">Played</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value" id="us-winrate">0%</div>
+      <div class="stat-label">Win Rate</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value" id="us-streak">0</div>
+      <div class="stat-label">Streak</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value" style="color:var(--accent);" id="us-score">0</div>
+      <div class="stat-label">Total Score</div>
+    </div>
+  </div>
+
+</div>
+
+<script src="./shared/scores.js"></script>
+<script>
+  fetch('./Worldcupcareers_ZENGIN.json')
+    .then(r => r.json())
+    .then(d => {
+      const players = d.flatMap(t => t.Players);
+      document.getElementById('stat-players').textContent = players.length;
+      document.getElementById('stat-teams').textContent = d.length;
+    })
+    .catch(() => {});
+
+  (function renderUserStats() {
+    const stats = FQP.getStats();
+    if (!stats.totalGames) return;
+    document.getElementById('user-stats-bar').style.display = 'flex';
+    document.getElementById('us-played').textContent = stats.totalGames;
+    document.getElementById('us-winrate').textContent = FQP.getWinRate(stats) + '%';
+    document.getElementById('us-streak').textContent = stats.currentStreak;
+    document.getElementById('us-score').textContent = stats.totalScore;
+  })();
+</script>
+
+</body>
+</html>

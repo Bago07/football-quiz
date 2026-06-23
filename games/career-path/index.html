@@ -1,0 +1,1196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Career Path Finder — Football Quiz Platform</title>
+  <meta name="description" content="Guess the football player from their career history. A trivia game for the 2026 FIFA World Cup.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../shared/styles.css">
+  <style>
+    /* ===== GAME-SPECIFIC STYLES ===== */
+    .game-shell {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: calc(100vh - var(--nav-height) - 80px);
+      min-height: calc(100dvh - var(--nav-height) - 80px);
+      padding: 1.5rem 1rem;
+    }
+    .game-card {
+      width: 100%;
+      max-width: 440px;
+    }
+
+    /* BACK BAR */
+    .top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.25rem;
+      display: none;
+    }
+    .back-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      padding: 6px 10px 6px 6px;
+      border-radius: var(--radius-sm);
+      transition: all var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-family: inherit;
+    }
+    .back-btn:hover { background: var(--surface-alt); color: var(--text-primary); }
+
+    .lives-display { display: flex; gap: 6px; align-items: center; }
+    .life-pip {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .life-pip.active { background: var(--danger); box-shadow: 0 0 0 3px rgba(192,57,43,0.18); }
+    .life-pip.empty  { background: var(--border); }
+
+    /* BRAND */
+    .brand { text-align: center; margin-bottom: 2rem; }
+    .logo-mark {
+      width: 72px; height: 72px;
+      background: var(--bg-main);
+      border-radius: 20px;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 1rem;
+      box-shadow: 0 2px 8px rgba(61,90,62,0.25), inset 0 1px 0 rgba(255,255,255,0.06);
+      position: relative;
+      overflow: hidden;
+    }
+    .logo-mark::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 20px;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .brand h1 {
+      font-size: 21px;
+      font-weight: 800;
+      color: var(--green-dark);
+      letter-spacing: -0.03em;
+    }
+    .brand .tagline {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+
+    /* DIFFICULTY SELECTOR */
+    .mode-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    .mode-card {
+      border: 1.5px solid var(--border-light);
+      background: var(--surface);
+      border-radius: var(--radius-md);
+      padding: 1.1rem 0.5rem 0.9rem;
+      cursor: pointer;
+      text-align: center;
+      transition: all var(--transition);
+      position: relative;
+      overflow: hidden;
+    }
+    .mode-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      border-radius: 3px 3px 0 0;
+      opacity: 0;
+      transition: opacity var(--transition);
+    }
+    .mode-card:hover {
+      border-color: var(--border);
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-md);
+    }
+    .mode-card:hover::before { opacity: 1; }
+    .mode-card:active { transform: translateY(-1px); }
+    .mode-card[data-mode="easy"]::before { background: var(--success); }
+    .mode-card[data-mode="mid"]::before  { background: var(--warning); }
+    .mode-card[data-mode="hard"]::before { background: var(--danger); }
+    .mode-card .mode-icon-wrap {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 8px;
+    }
+    .mode-card[data-mode="easy"] .mode-icon-wrap { background: var(--success-bg); color: var(--success); }
+    .mode-card[data-mode="mid"]  .mode-icon-wrap { background: var(--warning-bg); color: var(--warning); }
+    .mode-card[data-mode="hard"] .mode-icon-wrap { background: var(--danger-bg);  color: var(--danger);  }
+    .mode-card .mode-label { font-size: 13px; font-weight: 700; color: var(--text-primary); }
+    .mode-card .mode-desc  { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+
+    /* LOADER */
+    .loader-wrap {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      padding: 2rem 0;
+    }
+    .loader-wrap.visible { display: flex; }
+    .loader-spinner {
+      width: 28px; height: 28px;
+      border: 3px solid var(--border);
+      border-top-color: var(--green-mid);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loader-text { font-size: 12px; color: var(--text-muted); }
+
+    /* GAME HEADER */
+    .game-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.25rem;
+    }
+    .guess-counter { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+
+    /* PLAYER PHOTO */
+    .player-card-wrap {
+      position: relative;
+      width: 140px;
+      margin: 0 auto 1.25rem;
+    }
+    .player-card-inner {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 3/4;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      background: var(--surface-alt);
+      border: 2px solid var(--border-light);
+      box-shadow: var(--shadow-md);
+    }
+    .player-photo {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: filter 0.5s ease;
+    }
+    .player-photo.blurred { filter: blur(20px) brightness(0.55) saturate(0.6); }
+    .photo-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+    .photo-overlay.hidden { opacity: 0; }
+    .lock-icon {
+      width: 40px; height: 40px;
+      background: rgba(0,0,0,0.35);
+      backdrop-filter: blur(4px);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .lock-icon svg { width: 18px; height: 18px; stroke: rgba(255,255,255,0.85); stroke-width: 2; fill: none; }
+    .player-card-glow {
+      position: absolute;
+      bottom: -6px; left: 10%; right: 10%;
+      height: 20px;
+      background: var(--accent);
+      filter: blur(16px);
+      opacity: 0;
+      border-radius: 50%;
+      transition: opacity 0.5s ease;
+    }
+    .player-card-wrap.revealed .player-card-glow { opacity: 0.35; }
+
+    /* SEARCH INPUT */
+    .search-wrap {
+      position: relative;
+      margin-bottom: 0.75rem;
+    }
+    .search-icon {
+      position: absolute;
+      left: 12px; top: 50%;
+      transform: translateY(-50%);
+      width: 16px; height: 16px;
+      stroke: var(--text-muted);
+      stroke-width: 2;
+      fill: none;
+      pointer-events: none;
+      transition: stroke var(--transition);
+    }
+    .search-wrap input {
+      width: 100%;
+      padding: 11px 14px 11px 38px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-md);
+      font-size: 14px;
+      font-family: inherit;
+      color: var(--text-primary);
+      background: var(--surface);
+      outline: none;
+      transition: all var(--transition);
+    }
+    .search-wrap input::placeholder { color: var(--text-muted); }
+    .search-wrap input:focus {
+      border-color: var(--green-mid);
+      box-shadow: 0 0 0 3px rgba(90,138,92,0.15);
+    }
+    .search-wrap input:focus ~ .search-icon { stroke: var(--green-mid); }
+
+    .autocomplete {
+      position: absolute;
+      top: calc(100% + 5px);
+      left: 0; right: 0;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-md);
+      z-index: 100;
+      overflow: hidden;
+      box-shadow: var(--shadow-lg);
+      display: none;
+    }
+    .ac-option {
+      padding: 10px 14px 10px 38px;
+      font-size: 13px;
+      cursor: pointer;
+      color: var(--text-primary);
+      transition: background 0.1s;
+      position: relative;
+    }
+    .ac-option::before {
+      content: '';
+      position: absolute;
+      left: 14px; top: 50%;
+      transform: translateY(-50%);
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+    }
+    .ac-option:hover { background: var(--green-pale); }
+    .ac-option:hover::before { border-color: var(--green-mid); background: var(--green-mid); }
+
+    /* ACTION BUTTONS */
+    .action-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 0.75rem;
+    }
+    .action-btn {
+      border: 1.5px solid var(--border);
+      background: var(--surface);
+      border-radius: var(--radius-md);
+      padding: 10px 4px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--text-primary);
+      font-family: inherit;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all var(--transition);
+    }
+    .action-btn:hover { background: var(--surface-hover); transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+    .action-btn:active { transform: translateY(0); }
+    .action-btn svg.icon { width: 15px; height: 15px; }
+    .btn-submit { background: var(--bg-main); color: var(--text-on-dark); border-color: var(--bg-main); }
+    .btn-submit:hover { background: var(--bg-deep); border-color: var(--bg-deep); }
+    .btn-submit svg.icon { stroke: var(--text-on-dark); }
+    .btn-hint { color: var(--warning); border-color: rgba(150,112,10,0.25); }
+    .btn-hint svg.icon { stroke: var(--warning); }
+    .btn-hint:hover { background: var(--warning-bg); }
+    .btn-reveal { color: var(--text-secondary); }
+    .btn-reveal svg.icon { stroke: var(--text-secondary); }
+
+    .btn-play-again {
+      width: 100%;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-md);
+      padding: 12px;
+      font-size: 14px;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      transition: all var(--transition);
+    }
+    .btn-play-again:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: var(--shadow-md); }
+
+    /* HINT BOX */
+    .hint-box {
+      background: var(--warning-bg);
+      border: 1px solid rgba(150,112,10,0.15);
+      border-left: 3px solid var(--warning);
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--text-primary);
+      margin-bottom: 0.75rem;
+      display: none;
+      line-height: 1.6;
+    }
+    .hint-box strong { color: var(--warning); }
+
+    /* FEEDBACK */
+    .feedback {
+      font-size: 13px;
+      font-weight: 600;
+      text-align: center;
+      padding: 10px 16px;
+      border-radius: var(--radius-md);
+      margin-bottom: 0.75rem;
+      display: none;
+      animation: feedbackIn 0.3s ease;
+    }
+    @keyframes feedbackIn {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .feedback.correct  { background: var(--success-bg); color: var(--success); }
+    .feedback.wrong    { background: var(--danger-bg);  color: var(--danger);  }
+    .feedback.gameover { background: var(--warning-bg); color: var(--warning); }
+
+    /* CAREER TIMELINE */
+    .timeline-section { margin-top: 0.25rem; }
+    .timeline-heading {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .timeline-heading::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border-light);
+    }
+    .timeline {
+      position: relative;
+      padding-left: 24px;
+    }
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 7px; top: 6px; bottom: 6px;
+      width: 2px;
+      background: var(--border-light);
+      border-radius: 1px;
+    }
+    .tl-item {
+      position: relative;
+      padding: 7px 12px;
+      margin-bottom: 4px;
+      font-size: 13px;
+      color: var(--text-primary);
+      border-radius: var(--radius-sm);
+      transition: background var(--transition);
+      line-height: 1.5;
+    }
+    .tl-item:hover { background: var(--surface-alt); }
+    .tl-item::before {
+      content: '';
+      position: absolute;
+      left: -20px; top: 13px;
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--surface);
+      border: 2px solid var(--green-mid);
+      z-index: 1;
+    }
+    .tl-item.hidden-step { color: var(--text-muted); font-style: italic; }
+    .tl-item.hidden-step::before { border-color: var(--border); background: var(--border-light); }
+    .tl-item .tl-lock {
+      display: inline-flex;
+      width: 14px; height: 14px;
+      stroke: var(--text-muted);
+      stroke-width: 2;
+      fill: none;
+      vertical-align: -2px;
+      margin-right: 4px;
+    }
+
+    /* NAME ENTRY SCREEN */
+    #name-area { display: none; }
+    .name-screen { text-align: center; }
+    .name-screen h2 {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--green-dark);
+      margin-bottom: 4px;
+    }
+    .name-screen p {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 1.5rem;
+    }
+    .name-input {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-md);
+      font-size: 16px;
+      font-family: inherit;
+      font-weight: 600;
+      color: var(--text-primary);
+      text-align: center;
+      outline: none;
+      transition: all var(--transition);
+      margin-bottom: 1rem;
+    }
+    .name-input::placeholder { color: var(--text-muted); font-weight: 400; }
+    .name-input:focus {
+      border-color: var(--green-mid);
+      box-shadow: 0 0 0 3px rgba(90,138,92,0.15);
+    }
+    .btn-start-game {
+      width: 100%;
+      padding: 12px;
+      background: var(--bg-main);
+      color: var(--text-on-dark);
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: 14px;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      transition: all var(--transition);
+    }
+    .btn-start-game:hover { background: var(--bg-deep); transform: translateY(-1px); box-shadow: var(--shadow-md); }
+    .btn-start-game:disabled { opacity: 0.35; pointer-events: none; }
+    .btn-start-game svg { width: 16px; height: 16px; stroke: var(--text-on-dark); stroke-width: 2; fill: none; }
+
+    /* SESSION BAR (visible during game) */
+    .session-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 14px;
+      margin-bottom: 1rem;
+      background: var(--surface-alt);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-light);
+    }
+    .session-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .session-name svg { width: 14px; height: 14px; stroke: var(--text-muted); stroke-width: 2; fill: none; flex-shrink: 0; }
+    .session-score {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--accent);
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .session-score.reset-flash {
+      animation: scoreReset 0.5s ease;
+    }
+    @keyframes scoreReset {
+      0%, 100% { color: var(--accent); }
+      50% { color: var(--danger); transform: scale(1.15); }
+    }
+
+    /* SCORE RESULT PANEL */
+    .score-panel {
+      display: none;
+      text-align: center;
+      padding: 1.25rem;
+      margin-bottom: 0.75rem;
+      background: var(--surface-alt);
+      border-radius: var(--radius-md);
+      border: 1.5px solid var(--border-light);
+      animation: feedbackIn 0.35s ease;
+    }
+    .score-panel.visible { display: block; }
+    .score-big {
+      font-size: 36px;
+      font-weight: 800;
+      color: var(--accent);
+      letter-spacing: -0.04em;
+      line-height: 1;
+    }
+    .score-big.zero { color: var(--text-muted); }
+    .score-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-top: 4px;
+    }
+    .score-breakdown {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      margin-top: 12px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+    .score-breakdown span { display: flex; align-items: center; gap: 4px; }
+    .score-breakdown svg { width: 13px; height: 13px; stroke: currentColor; stroke-width: 2; fill: none; }
+
+    .end-actions {
+      display: none;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 0.75rem;
+    }
+    .end-actions.visible { display: grid; }
+
+    .btn-share {
+      background: var(--surface);
+      color: var(--text-primary);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 11px;
+      font-size: 13px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      transition: all var(--transition);
+    }
+    .btn-share:hover { background: var(--surface-hover); transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+    .btn-share svg { width: 15px; height: 15px; stroke: currentColor; stroke-width: 2; fill: none; }
+
+    .share-toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--bg-deep);
+      color: var(--text-on-dark);
+      padding: 10px 20px;
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      font-weight: 600;
+      box-shadow: var(--shadow-lg);
+      opacity: 0;
+      transition: all 0.3s ease;
+      pointer-events: none;
+      z-index: 300;
+    }
+    .share-toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* STATS PANEL (menu screen) */
+    .stats-panel {
+      margin-top: 1.5rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid var(--border-light);
+    }
+    .stats-heading {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .stats-heading::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border-light);
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+    }
+    .stat-box {
+      text-align: center;
+      padding: 10px 4px;
+      background: var(--surface-alt);
+      border-radius: var(--radius-sm);
+    }
+    .stat-val {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--green-dark);
+      letter-spacing: -0.03em;
+      line-height: 1.2;
+    }
+    .stat-val.accent { color: var(--accent); }
+    .stat-lbl {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-top: 2px;
+    }
+
+    .recent-heading {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin: 1rem 0 0.5rem;
+    }
+    .recent-list { display: flex; flex-direction: column; gap: 4px; }
+    .recent-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 10px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      background: var(--surface-alt);
+    }
+    .recent-player {
+      font-weight: 600;
+      color: var(--text-primary);
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      margin-right: 8px;
+    }
+    .recent-score { font-weight: 700; color: var(--accent); white-space: nowrap; }
+    .recent-miss  { font-weight: 600; color: var(--text-muted); white-space: nowrap; }
+
+    @media (max-width: 480px) {
+      .brand h1 { font-size: 19px; }
+      .mode-card { padding: 0.9rem 0.4rem 0.75rem; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+<script src="../../shared/nav.js" data-active="career-path"></script>
+
+<div class="game-shell">
+  <div class="game-card">
+    <div class="card">
+
+      <!-- TOP BAR -->
+      <div class="top-bar" id="back-bar">
+        <button class="back-btn" onclick="backToMenu()" aria-label="Back to menu">
+          <svg class="icon" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+          Menu
+        </button>
+        <div class="lives-display" id="lives-display"></div>
+      </div>
+
+      <!-- MENU SCREEN -->
+      <div id="menu-area" class="fade-in">
+        <div class="brand">
+          <div class="logo-mark">
+            <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+              <circle cx="8" cy="31" r="3" fill="#5A8A5C" opacity="0.7"/>
+              <circle cx="20" cy="20" r="3" fill="#A8C5A0"/>
+              <circle cx="32" cy="9" r="4.5" fill="#C9A84C"/>
+              <line x1="10.5" y1="29" x2="17.5" y2="22" stroke="#5A8A5C" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+              <line x1="22.5" y1="18" x2="29" y2="11.5" stroke="#A8C5A0" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+              <text x="32" y="13" text-anchor="middle" font-family="Inter,sans-serif" font-size="10" font-weight="800" fill="#2B3F2C">?</text>
+            </svg>
+          </div>
+          <h1>Career Path Finder</h1>
+          <p class="tagline">Trace the transfers. Name the player.</p>
+          <div class="badge badge-accent" style="margin-top:10px;">2026 World Cup Edition</div>
+        </div>
+
+        <div class="loader-wrap" id="loader">
+          <div class="loader-spinner"></div>
+          <span class="loader-text">Loading player data...</span>
+        </div>
+
+        <div class="mode-grid" id="mode-grid" style="display:none;">
+          <div class="mode-card" data-mode="easy" onclick="startGame('easy')">
+            <div class="mode-icon-wrap">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <div class="mode-label">Easy</div>
+            <div class="mode-desc">Top nations</div>
+          </div>
+          <div class="mode-card" data-mode="mid" onclick="startGame('mid')">
+            <div class="mode-icon-wrap">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </div>
+            <div class="mode-label">Medium</div>
+            <div class="mode-desc">Mixed pool</div>
+          </div>
+          <div class="mode-card" data-mode="hard" onclick="startGame('hard')">
+            <div class="mode-icon-wrap">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            </div>
+            <div class="mode-label">Hard</div>
+            <div class="mode-desc">Dark horses</div>
+          </div>
+        </div>
+
+        <div class="stats-panel" id="stats-panel" style="display:none;">
+          <div class="stats-heading">Your Stats</div>
+          <div class="stats-grid">
+            <div class="stat-box"><div class="stat-val" id="st-played">0</div><div class="stat-lbl">Played</div></div>
+            <div class="stat-box"><div class="stat-val" id="st-winrate">0%</div><div class="stat-lbl">Win %</div></div>
+            <div class="stat-box"><div class="stat-val" id="st-streak">0</div><div class="stat-lbl">Streak</div></div>
+            <div class="stat-box"><div class="stat-val accent" id="st-score">0</div><div class="stat-lbl">Score</div></div>
+          </div>
+          <div class="recent-heading" id="recent-heading" style="display:none;">Recent</div>
+          <div class="recent-list" id="recent-list"></div>
+        </div>
+      </div>
+
+      <!-- NAME ENTRY SCREEN -->
+      <div id="name-area" class="fade-in">
+        <div class="name-screen">
+          <h2>Ready to play?</h2>
+          <p>Pick a nickname for this session</p>
+          <input type="text" class="name-input" id="name-input" placeholder="Your nickname..." maxlength="20" onkeydown="if(event.key==='Enter')confirmName()" autofocus>
+          <button class="btn-start-game" id="btn-start" onclick="confirmName()" disabled>
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            Start Game
+          </button>
+        </div>
+      </div>
+
+      <!-- GAME SCREEN -->
+      <div id="game-area" class="fade-in">
+        <div class="session-bar" id="session-bar">
+          <div class="session-name">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <span id="session-name-text">Player</span>
+          </div>
+          <div class="session-score" id="session-score-display">0 pts</div>
+        </div>
+        <div class="game-header">
+          <span id="mode-badge" class="badge"></span>
+          <span class="guess-counter" id="guess-counter">3 guesses left</span>
+        </div>
+
+        <div class="player-card-wrap" id="player-card-wrap">
+          <div class="player-card-inner">
+            <img id="player-photo" src="" class="player-photo blurred" alt="Mystery player">
+            <div class="photo-overlay" id="photo-overlay">
+              <div class="lock-icon">
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div class="player-card-glow"></div>
+        </div>
+
+        <div class="search-wrap">
+          <input type="text" id="player-input" placeholder="Type a player name..." oninput="showSuggestions()" onkeydown="handleInputKey(event)" autocomplete="off">
+          <svg class="search-icon" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <div class="autocomplete" id="autocomplete-list"></div>
+        </div>
+
+        <div class="action-row">
+          <button class="action-btn btn-submit" onclick="checkGuess()">
+            <svg class="icon" viewBox="0 0 24 24" style="stroke:var(--text-on-dark)"><polyline points="20 6 9 17 4 12"/></svg>
+            Submit
+          </button>
+          <button class="action-btn btn-hint" onclick="getHint()" id="hint-btn">
+            <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            Hint
+          </button>
+          <button class="action-btn btn-reveal" onclick="revealPlayer()" id="reveal-btn">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            Reveal
+          </button>
+        </div>
+
+        <div class="score-panel" id="score-panel">
+          <div class="score-big" id="score-value">0</div>
+          <div class="score-label">Points Earned</div>
+          <div class="score-breakdown" id="score-breakdown"></div>
+        </div>
+
+        <div class="end-actions" id="end-actions">
+          <button class="btn-share" onclick="shareResult()">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+            Share
+          </button>
+          <button class="btn-play-again" id="play-again-btn" onclick="resetGame()" style="display:flex;">
+            <svg class="icon" viewBox="0 0 24 24" style="stroke:#fff"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            Play Again
+          </button>
+        </div>
+
+        <div class="hint-box" id="hint-box"></div>
+        <div class="feedback" id="feedback"></div>
+
+        <div class="timeline-section">
+          <div class="timeline-heading">Career History</div>
+          <div class="timeline" id="career-list"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="share-toast" id="share-toast">Copied to clipboard!</div>
+
+<script src="../../shared/scores.js"></script>
+<script>
+  let fullData = [], currentGamePlayer = null, selectedPlayerSlug = '', hintLevel = 0,
+      currentDifficulty = 'easy', guessCount = 0, currentLives = 3, gameEnded = false,
+      lastResult = null, sessionPlayerName = '', sessionScore = 0;
+
+  const groups = {
+    easy: ['France','Spain','Netherlands','England','Germany','Argentina','Brazil','Belgium','Portugal','Turkey'],
+    mid:  ['United States','Norway','Colombia','Morocco','Sweden','Austria','Mexico','Japan','Scotland','Senegal','Croatia','Switzerland','Uruguay','Ivory Coast','Bosnia-Herzegovina'],
+    hard: ['Curacao','Panama','Tunisia','Paraguay','Qatar','South Africa','Uzbekistan','Czechia','Ecuador','Iraq','Canada','Jordan','Algeria','Ghana','South Korea','Haiti','Saudi Arabia','Iran','New Zealand','Congo DR','Egypt','Cape Verde Islands','Australia']
+  };
+
+  const loader = document.getElementById('loader');
+  const modeGrid = document.getElementById('mode-grid');
+
+  loader.classList.add('visible');
+  fetch('../../Worldcupcareers_ZENGIN.json')
+    .then(r => r.json())
+    .then(d => {
+      fullData = d;
+      loader.classList.remove('visible');
+      modeGrid.style.display = 'grid';
+      renderMenuStats();
+    })
+    .catch(() => {
+      loader.querySelector('.loader-text').textContent = 'Failed to load data. Please refresh.';
+      loader.querySelector('.loader-spinner').style.display = 'none';
+    });
+
+  function updateLives() {
+    const el = document.getElementById('lives-display');
+    let h = '';
+    for (let i = 0; i < 3; i++) h += '<div class="life-pip ' + (i < currentLives ? 'active' : 'empty') + '"></div>';
+    el.innerHTML = h;
+    const left = 3 - guessCount;
+    document.getElementById('guess-counter').textContent = left === 1 ? '1 guess left' : left + ' guesses left';
+  }
+
+  function startGame(mode) {
+    if (!fullData.length) return;
+    currentDifficulty = mode;
+    sessionScore = 0;
+    document.getElementById('menu-area').style.display = 'none';
+    document.getElementById('name-area').style.display = 'block';
+    document.getElementById('back-bar').style.display = 'flex';
+
+    const nameInput = document.getElementById('name-input');
+    const btnStart = document.getElementById('btn-start');
+    nameInput.value = sessionPlayerName;
+    btnStart.disabled = !sessionPlayerName;
+    nameInput.oninput = () => { btnStart.disabled = !nameInput.value.trim(); };
+    nameInput.focus();
+  }
+
+  function confirmName() {
+    const name = document.getElementById('name-input').value.trim();
+    if (!name) return;
+    sessionPlayerName = name;
+    document.getElementById('name-area').style.display = 'none';
+    document.getElementById('game-area').style.display = 'block';
+    document.getElementById('session-name-text').textContent = sessionPlayerName;
+    updateSessionScoreDisplay();
+
+    const badge = document.getElementById('mode-badge');
+    const labels = { easy: 'Easy', mid: 'Medium', hard: 'Hard' };
+    badge.textContent = labels[currentDifficulty];
+    badge.className = 'badge badge-' + currentDifficulty;
+    resetGame();
+    document.getElementById('player-input').focus();
+  }
+
+  function backToMenu() {
+    document.getElementById('menu-area').style.display = 'block';
+    document.getElementById('game-area').style.display = 'none';
+    document.getElementById('name-area').style.display = 'none';
+    document.getElementById('back-bar').style.display = 'none';
+    renderMenuStats();
+  }
+
+  function resetGame() {
+    hintLevel = 0; guessCount = 0; currentLives = 3; selectedPlayerSlug = ''; gameEnded = false; lastResult = null;
+    updateLives();
+    document.getElementById('player-input').value = '';
+    document.getElementById('autocomplete-list').style.display = 'none';
+    setFeedback('', '');
+    document.getElementById('hint-box').style.display = 'none';
+    document.getElementById('hint-box').innerHTML = '';
+    document.getElementById('hint-btn').classList.remove('btn-disabled');
+    document.getElementById('reveal-btn').style.display = 'flex';
+    document.getElementById('end-actions').classList.remove('visible');
+    document.getElementById('score-panel').classList.remove('visible');
+    document.getElementById('photo-overlay').classList.remove('hidden');
+    document.getElementById('player-card-wrap').classList.remove('revealed');
+
+    const hasCareer = p => p.ProcessedCareer && p.ProcessedCareer.length > 0;
+    let pool = [], selectedGroup = '', roll = Math.random() * 100;
+
+    if (currentDifficulty === 'easy') {
+      pool = fullData.flatMap(t => t.Players).filter(p => groups.easy.includes(p.Nationality) && hasCareer(p));
+    } else if (currentDifficulty === 'mid') {
+      if (roll < 30) { pool = fullData.flatMap(t => t.Players).filter(p => groups.easy.includes(p.Nationality) && hasCareer(p)); selectedGroup = 'easy'; }
+      else           { pool = fullData.flatMap(t => t.Players).filter(p => groups.mid.includes(p.Nationality) && hasCareer(p)); selectedGroup = 'mid'; }
+    } else {
+      if (roll < 10)      { pool = fullData.flatMap(t => t.Players).filter(p => groups.easy.includes(p.Nationality) && hasCareer(p)); selectedGroup = 'easy'; }
+      else if (roll < 30) { pool = fullData.flatMap(t => t.Players).filter(p => groups.mid.includes(p.Nationality) && hasCareer(p)); selectedGroup = 'mid'; }
+      else                { pool = fullData.flatMap(t => t.Players).filter(p => groups.hard.includes(p.Nationality) && hasCareer(p)); selectedGroup = 'hard'; }
+    }
+
+    currentGamePlayer = pool[Math.floor(Math.random() * pool.length)];
+    const img = document.getElementById('player-photo');
+    img.src = currentGamePlayer.ImageUrl;
+    img.className = 'player-photo blurred';
+
+    const careerList = document.getElementById('career-list');
+    careerList.innerHTML = '';
+    let hideCount = 0;
+    if (currentDifficulty === 'mid' && selectedGroup === 'easy') hideCount = 1;
+    if (currentDifficulty === 'hard') {
+      if (selectedGroup === 'easy') hideCount = Math.ceil(currentGamePlayer.ProcessedCareer.length * 0.34);
+      else if (selectedGroup === 'mid') hideCount = 1;
+    }
+
+    currentGamePlayer.ProcessedCareer.forEach((row, i) => {
+      const div = document.createElement('div');
+      if (i >= currentGamePlayer.ProcessedCareer.length - hideCount) {
+        div.className = 'tl-item hidden-step';
+        div.innerHTML = '<svg class="tl-lock" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Hidden transfer';
+      } else {
+        div.className = 'tl-item';
+        div.textContent = row;
+      }
+      careerList.appendChild(div);
+    });
+  }
+
+  function setFeedback(msg, type) {
+    const el = document.getElementById('feedback');
+    if (!msg) { el.style.display = 'none'; return; }
+    el.textContent = msg;
+    el.className = 'feedback ' + type;
+    el.style.display = 'block';
+    el.style.animation = 'none';
+    el.offsetHeight;
+    el.style.animation = '';
+  }
+
+  function checkGuess() {
+    if (!selectedPlayerSlug || gameEnded) return;
+    if (selectedPlayerSlug === currentGamePlayer.Slug) {
+      setFeedback('Correct! ' + currentGamePlayer.Name, 'correct');
+      endRound(true);
+    } else {
+      guessCount++; currentLives--;
+      updateLives();
+      if (guessCount < 3) setFeedback('Wrong — try again', 'wrong');
+      else { setFeedback('Out of lives! Answer: ' + currentGamePlayer.Name, 'gameover'); endRound(false); }
+    }
+    selectedPlayerSlug = '';
+    document.getElementById('player-input').value = '';
+  }
+
+  function unlockPlayer() {
+    document.getElementById('player-photo').className = 'player-photo';
+    document.getElementById('photo-overlay').classList.add('hidden');
+    document.getElementById('player-card-wrap').classList.add('revealed');
+    document.getElementById('reveal-btn').style.display = 'none';
+    document.getElementById('hint-btn').classList.add('btn-disabled');
+  }
+
+  function endRound(won) {
+    if (gameEnded) return;
+    gameEnded = true;
+    unlockPlayer();
+
+    const result = {
+      difficulty: currentDifficulty,
+      guessCount: won ? guessCount : 3,
+      hintLevel,
+      won,
+      playerName: currentGamePlayer.Name
+    };
+    const { score, stats } = FQP.record(result);
+    lastResult = { ...result, score, stats };
+
+    if (won) {
+      sessionScore += score;
+    } else {
+      sessionScore = 0;
+      flashSessionScoreReset();
+    }
+    updateSessionScoreDisplay();
+    showScorePanel(score, won);
+    document.getElementById('end-actions').classList.add('visible');
+  }
+
+  function updateSessionScoreDisplay() {
+    document.getElementById('session-score-display').textContent = sessionScore + ' pts';
+  }
+
+  function flashSessionScoreReset() {
+    const el = document.getElementById('session-score-display');
+    el.classList.remove('reset-flash');
+    void el.offsetHeight;
+    el.classList.add('reset-flash');
+  }
+
+  function showScorePanel(score, won) {
+    const panel = document.getElementById('score-panel');
+    const valEl = document.getElementById('score-value');
+    const breakEl = document.getElementById('score-breakdown');
+
+    valEl.textContent = '+' + score;
+    valEl.className = 'score-big' + (score === 0 ? ' zero' : '');
+
+    const diffLabels = { easy: 'Easy', mid: 'Medium', hard: 'Hard' };
+    let parts = [];
+    parts.push(`<span><svg viewBox="0 0 24 24" stroke-linecap="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>${diffLabels[currentDifficulty]}</span>`);
+    if (won) {
+      const guessLabel = ['1st try', '2nd try', '3rd try'][guessCount];
+      parts.push(`<span><svg viewBox="0 0 24 24" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>${guessLabel}</span>`);
+    }
+    if (hintLevel > 0) parts.push(`<span><svg viewBox="0 0 24 24" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>${hintLevel} hint${hintLevel > 1 ? 's' : ''}</span>`);
+    breakEl.innerHTML = parts.join('');
+    panel.classList.add('visible');
+  }
+
+  function renderMenuStats() {
+    const stats = FQP.getStats();
+    if (!stats.totalGames) return;
+    document.getElementById('stats-panel').style.display = 'block';
+    document.getElementById('st-played').textContent = stats.totalGames;
+    document.getElementById('st-winrate').textContent = FQP.getWinRate(stats) + '%';
+    document.getElementById('st-streak').textContent = stats.currentStreak;
+    document.getElementById('st-score').textContent = stats.totalScore;
+
+    const list = document.getElementById('recent-list');
+    list.innerHTML = '';
+    const recent = stats.history.filter(h => h.game === 'career-path').slice(0, 5);
+    if (recent.length) {
+      document.getElementById('recent-heading').style.display = 'block';
+      recent.forEach(h => {
+        const row = document.createElement('div');
+        row.className = 'recent-row';
+        const diffBadge = { easy: 'E', mid: 'M', hard: 'H' }[h.difficulty] || '?';
+        row.innerHTML = `<span class="badge badge-${h.difficulty}" style="padding:2px 7px;font-size:10px;margin-right:8px;">${diffBadge}</span>`
+          + `<span class="recent-player">${h.playerName || 'Unknown'}</span>`
+          + (h.won ? `<span class="recent-score">+${h.score}</span>` : `<span class="recent-miss">Miss</span>`);
+        list.appendChild(row);
+      });
+    }
+  }
+
+  async function shareResult() {
+    if (!lastResult) return;
+    const status = await FQP.share(lastResult);
+    if (status === 'copied' || status === 'shared') {
+      const toast = document.getElementById('share-toast');
+      toast.textContent = status === 'copied' ? 'Copied to clipboard!' : 'Shared!';
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2200);
+    }
+  }
+
+  function getHint() {
+    const box = document.getElementById('hint-box');
+    box.style.display = 'block';
+    hintLevel++;
+    if (hintLevel === 1) box.innerHTML = '<strong>Nationality:</strong> ' + currentGamePlayer.Nationality;
+    else if (hintLevel === 2) box.innerHTML += ' &nbsp;&middot;&nbsp; <strong>Position:</strong> ' + currentGamePlayer.TransfermarktPosition;
+    else if (hintLevel === 3) {
+      document.getElementById('player-photo').className = 'player-photo';
+      document.getElementById('photo-overlay').classList.add('hidden');
+      box.innerHTML += ' &nbsp;&middot;&nbsp; Photo revealed';
+      document.getElementById('hint-btn').classList.add('btn-disabled');
+    }
+  }
+
+  function revealPlayer() {
+    setFeedback('Answer: ' + currentGamePlayer.Name, 'gameover');
+    endRound(false);
+  }
+
+  function showSuggestions() {
+    const val = document.getElementById('player-input').value;
+    const container = document.getElementById('autocomplete-list');
+    container.innerHTML = '';
+    selectedPlayerSlug = '';
+    if (val.length < 3) { container.style.display = 'none'; return; }
+    const matches = fullData.flatMap(t => t.Players)
+      .filter(p => p.Name.toLowerCase().includes(val.toLowerCase()))
+      .slice(0, 6);
+    if (!matches.length) { container.style.display = 'none'; return; }
+    matches.forEach(m => {
+      const div = document.createElement('div');
+      div.className = 'ac-option';
+      div.textContent = m.Name;
+      div.onclick = () => {
+        document.getElementById('player-input').value = m.Name;
+        selectedPlayerSlug = m.Slug;
+        container.style.display = 'none';
+      };
+      container.appendChild(div);
+    });
+    container.style.display = 'block';
+  }
+
+  function handleInputKey(e) {
+    if (e.key === 'Enter' && selectedPlayerSlug) checkGuess();
+  }
+
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.search-wrap')) document.getElementById('autocomplete-list').style.display = 'none';
+  });
+</script>
+
+</body>
+</html>
