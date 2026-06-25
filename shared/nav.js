@@ -11,6 +11,7 @@
 
   const games = [
     { slug: 'career-path', label: 'Career Path', href: '/games/career-path/index.html' },
+    { slug: 'who-scored', label: 'Who Scored', href: '/games/Who Scored/index.html' },
   ];
 
   const basePath = detectBasePath();
